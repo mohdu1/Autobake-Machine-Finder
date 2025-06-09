@@ -15,27 +15,41 @@ st.set_page_config(layout="wide", page_title="Autobake Machine Match")
 st.markdown(
     """
     <style>
-    /* Overall Body Background */
+    /* Overall Body Background and crucial overflow fix */
     html, body {
         background-color: #F2DBBB; /* Overall body background except specified areas */
         color: #333333; /* Default text color */
+        overflow-x: hidden; /* PREVENTS HORIZONTAL SHIFTING ON MOBILE/SMALL SCREENS */
     }
 
-    /* Streamlit Main Content Area (this is a common wrapper) */
+    /* Streamlit Main App Container - Removed flexbox for stability */
+    /*
+    [data-testid="stAppViewContainer"] {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    */
+
+    /* Streamlit Main Content Area - Reverted to simpler background */
     .stApp {
         background-color: #F2DBBB; /* Overall body background for Streamlit app */
+        /* Removed flex-grow: 1; for stability */
     }
 
     /* Custom styles for the main title 'Autobake Machine Match' block */
     .header-section {
         background-color: #FFE8C2; /* Background for the heading part */
         padding: 20px 0; /* Add some padding around the title background */
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow for header */
+
+        /* REVERTED: Full width hack that's more stable for Streamlit */
         margin-top: -20px; /* Adjust to remove default Streamlit top margin */
         margin-left: -3rem; /* Compensate for Streamlit's default left/right padding */
         margin-right: -3rem; /* Compensate for Streamlit's default left/right padding */
         width: calc(100% + 6rem); /* Make it span full width including Streamlit's padding */
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow for header */
+        box-sizing: border-box; /* Crucial for padding/borders not to add to width */
     }
     .header-section h1 {
         display: inline;
@@ -183,12 +197,8 @@ st.markdown(
     }
 
     /* Adjust padding for main content area to align with background */
-    .css-1d3f8hp, .css-18e3th9 { /* Common classes for the main content block, some versions use 18e3th9 */
-        padding-top: 2rem;
-        padding-right: 3rem;
-        padding-left: 3rem;
-        padding-bottom: 2rem;
-    }
+    /* No changes needed here, as the full-width elements handle their own margins */
+
 
     /* Sidebar Styling */
     [data-testid="stSidebar"] {
@@ -198,6 +208,7 @@ st.markdown(
     [data-testid="stSidebarContent"] {
         background-color: #FFEED4 !important; /* Ensure content area also matches */
         padding-top: 2rem; /* Add some padding at the top of the sidebar content */
+        /* NO min-height: 100vh here, which often causes scrolling issues */
     }
     [data-testid="stSidebar"] .st-emotion-cache-1kyxreq h2, /* Specific targeting for selectbox label in sidebar */
     [data-testid="stSidebar"] h2 {
@@ -211,13 +222,29 @@ st.markdown(
     [data-testid="stSidebar"] .stButton > button:hover {
         background-color: #3b3f1b;
     }
+
+    /* Copyright Footer Styling */
+    .footer {
+        font-size: 0.8rem;
+        color: #66382B; /* Darker brown from palette for text */
+        background-color: transparent; /* Removed background */
+        text-align: center;
+        margin-top: 50px; /* Space above the footer - REVERTED to fixed margin */
+        padding: 20px 0; /* Padding inside the footer div */
+        border-top: 1px solid #DDDDDD; /* A subtle line above it */
+
+        /* REVERTED: Full width hack that's more stable for Streamlit */
+        width: calc(100% + 6rem); /* Ensure it spans full width including Streamlit's padding */
+        box-sizing: border-box; /* Include padding and border in the width */
+        margin-left: -3rem; /* Compensate for Streamlit's default left/right padding */
+        margin-right: -3rem; /* Compensate for Streamlit's default left/right padding */
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
 
 # --- Excel to CSV Sync Function (Integrated) ---
-# Removed get_resource_path for direct file access
 def excel_to_csv_sync(excel_file_path, csv_file_path):
     # These messages will now go to the terminal/console, not the app UI.
     print(f"🔄 Running Excel to CSV sync from '{excel_file_path}' to '{csv_file_path}'...")
@@ -244,7 +271,6 @@ def excel_to_csv_sync(excel_file_path, csv_file_path):
         return False
 
 # --- Data Sync and Loading ---
-# Removed get_resource_path, now directly referencing files
 EXCEL_FILE = "Autobake_Machines_Data.xlsx"
 CSV_FILE = "Raw_Data.csv"
 
@@ -347,7 +373,7 @@ machine_stage_mapping = {
     "Inline Depositing & Decorating": "Depositing",
 
     "Depositing & Icing": "Finishing", "Depositing Injecting & Icing": "Finishing",
-    "Depositing & Injecting": "Filling", "Filler": "Filling",
+    "Depositing & Injecting": "Filling", "Filling": "Filling", # Corrected typo in key to match value
 
     "Convection oven": "Baking", "Fryer": "Baking",
     "Cyclothermic Deck Oven": "Baking", "Rotary Rack Oven": "Baking",
@@ -375,6 +401,7 @@ machine_stage_mapping = {
     "Integrated Donut Line": "Complete Line", "Integrated Pastry Line": "Complete Line",
     "General Purpose": "General Processing", "Industrial Line": "Complete Line"
 }
+
 
 # Helper function for fuzzy matching categories
 def get_stage_from_category(category_name, mapping=machine_stage_mapping, threshold=85):
@@ -675,15 +702,18 @@ def match_from_inputs(prompt, selected_product, dough_weight_input, capacity_inp
 
         if isinstance(min_capacity, (int, float)):
             stage_eligible_machines["Calculated Units Required"] = stage_eligible_machines["_Numeric_Production Capacity (pcs/hr)"].apply(
-                lambda x: math.ceil(min_capacity / x) if pd.notna(x) and x > 0 else (None if pd.isna(x) else float('inf'))
+                lambda x: math.ceil(min_capacity / x) if pd.notna(x) and x > 0 else (None if pd.isna(x) or x == 0 else float('inf'))
             )
             stage_eligible_machines["Calculated Total Capacity"] = stage_eligible_machines.apply(
                 lambda row: row["Calculated Units Required"] * row["_Numeric_Production Capacity (pcs/hr)"]
                 if pd.notna(row["Calculated Units Required"]) and pd.notna(row["_Numeric_Production Capacity (pcs/hr)"])
+                and row["Calculated Units Required"] != float('inf') # Exclude inf units from total capacity calculation
                 else None, axis=1
             )
             capacity_match_mask = (stage_eligible_machines["_Numeric_Production Capacity (pcs/hr)"].notna()) & \
-                                  (stage_eligible_machines["Calculated Total Capacity"] >= min_capacity)
+                                  (stage_eligible_machines["_Numeric_Production Capacity (pcs/hr)"] > 0) & \
+                                  (stage_eligible_machines["Calculated Total Capacity"].fillna(0) >= min_capacity) # Fillna 0 for comparison
+
         else:
             stage_eligible_machines["Calculated Units Required"] = None
             stage_eligible_machines["Calculated Total Capacity"] = None
@@ -759,3 +789,13 @@ if submitted:
     with results_placeholder.container(): # Use the placeholder to display dynamic content
         with st.spinner("Searching for machines..."):
             match_from_inputs(prompt_input, selected_product, dough_weight_input, capacity_input)
+
+# --- Copyright Footer ---
+st.markdown(
+    """
+    <div class="footer">
+        &copy; Designed and developed by Mohammed Udaipurwala
+    </div>
+    """,
+    unsafe_allow_html=True
+)

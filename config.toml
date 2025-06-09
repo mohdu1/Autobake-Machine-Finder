@@ -1,0 +1,3 @@
+[server]
+headless = false
+port = 8501 # You can choose any available port here, e.g., 8050, 8888, etc.

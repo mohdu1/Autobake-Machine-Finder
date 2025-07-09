@@ -1,7 +1,9 @@
 Autobake Machine Match App 🍞✨
+
 This Streamlit application helps users quickly find suitable bakery machines based on their specific product, dough weight, and production capacity requirements. It streamlines the process of matching production needs with available machinery, presenting results by stages of the baking process.
 
 Features 🚀
+
 Intelligent Search: Describe your machine needs in natural language (e.g., "I need a line for 5000 donuts per hour with 50g dough weight").
 
 Detailed Filtering: Optionally refine your search using dedicated dropdowns for product selection, and input fields for specific dough weight and production capacity.
@@ -15,6 +17,7 @@ Dynamic Data Sync: Automatically syncs machine data from an Excel file (Autobake
 Custom Theme: Features a custom, user-friendly theme with colors inspired by bakery aesthetics for an enhanced visual experience.
 
 Usage Guide 📋
+
 Input Your Requirements:
 
 Use the "Describe your requirement" text box for a natural language query.
